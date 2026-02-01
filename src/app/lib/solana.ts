@@ -3,6 +3,11 @@ import { Connection, PublicKey } from "@solana/web3.js";
 const PROGRAM_ID = new PublicKey("PoWSNH2hEZogtCg1Zgm51FnkmJperzYDgPK4fvs8taL");
 const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
 
+// In-memory cache: faucet data refreshes every 60 seconds
+const CACHE_TTL_MS = 60_000;
+let cachedFaucets: FaucetInfo[] | null = null;
+let cacheTimestamp = 0;
+
 export interface FaucetInfo {
   specAddress: string;
   faucetAddress: string;
@@ -16,6 +21,11 @@ export interface FaucetInfo {
 }
 
 export async function getAllFaucets(): Promise<FaucetInfo[]> {
+  const now = Date.now();
+  if (cachedFaucets && now - cacheTimestamp < CACHE_TTL_MS) {
+    return cachedFaucets;
+  }
+
   const connection = new Connection(RPC_URL, "confirmed");
 
   // Faucet spec accounts are 17 bytes: 8 discriminator + 1 difficulty + 8 amount
@@ -68,6 +78,10 @@ export async function getAllFaucets(): Promise<FaucetInfo[]> {
 
   // Sort by difficulty ascending, then reward descending
   faucets.sort((a, b) => a.difficulty - b.difficulty || b.rewardSol - a.rewardSol);
+
+  // Update cache
+  cachedFaucets = faucets;
+  cacheTimestamp = now;
 
   return faucets;
 }

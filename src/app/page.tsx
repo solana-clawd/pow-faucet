@@ -1,17 +1,4 @@
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-import { getAllFaucets } from "@/app/lib/solana";
-
-export default async function Home() {
-  let fundedCount = 0;
-  try {
-    const faucets = await getAllFaucets();
-    fundedCount = faucets.filter((f) => f.funded).length;
-  } catch {
-    // silent
-  }
-
+export default function Home() {
   return (
     <div className="container" style={{ paddingTop: 64, paddingBottom: 64 }}>
       {/* Hero */}
@@ -54,16 +41,16 @@ export default async function Home() {
       <section className="mb-16">
         <div className="grid-3" style={{ maxWidth: 600, margin: "0 auto", textAlign: "center" }}>
           <div className="glass">
-            <div className="text-3xl font-bold gradient-text">{fundedCount}</div>
-            <p className="text-sm text-muted">funded faucets</p>
-          </div>
-          <div className="glass">
             <div className="text-3xl font-bold gradient-text">⛏️</div>
             <p className="text-sm text-muted">proof-of-work</p>
           </div>
           <div className="glass">
             <div className="text-3xl font-bold gradient-text">🤖</div>
             <p className="text-sm text-muted">agent-native</p>
+          </div>
+          <div className="glass">
+            <div className="text-3xl font-bold gradient-text">🔗</div>
+            <p className="text-sm text-muted">on-chain</p>
           </div>
         </div>
       </section>
@@ -105,6 +92,26 @@ devnet-pow mine --target-lamports 1000000000 -ud`}
           <p className="text-sm text-muted mt-4">
             Program ID: <code>PoWSNH2hEZogtCg1Zgm51FnkmJperzYDgPK4fvs8taL</code>
           </p>
+        </div>
+      </section>
+
+      {/* API */}
+      <section className="mb-16">
+        <h2 className="text-3xl font-bold text-center mb-8">API Endpoints</h2>
+        <div className="glass" style={{ maxWidth: 650, margin: "0 auto" }}>
+          {[
+            { method: "GET", path: "/api/v1/faucets", desc: "List all faucets with balances" },
+            { method: "GET", path: "/api/v1/health", desc: "Health check" },
+            { method: "GET", path: "/api/v1/mine/instructions", desc: "Mining instructions for agents" },
+            { method: "GET", path: "/skill.md", desc: "Agent skill file" },
+            { method: "GET", path: "/heartbeat.md", desc: "Agent heartbeat file" },
+          ].map((ep) => (
+            <div key={ep.path} className="ep-row">
+              <span className="badge badge-purple" style={{ fontFamily: "monospace" }}>{ep.method}</span>
+              <code className="text-green">{ep.path}</code>
+              <span className="text-muted text-sm">— {ep.desc}</span>
+            </div>
+          ))}
         </div>
       </section>
 
