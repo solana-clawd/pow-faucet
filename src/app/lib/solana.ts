@@ -3,8 +3,8 @@ import { Connection, PublicKey } from "@solana/web3.js";
 const PROGRAM_ID = new PublicKey("PoWSNH2hEZogtCg1Zgm51FnkmJperzYDgPK4fvs8taL");
 const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
 
-// In-memory cache: faucet data refreshes every 60 seconds
-const CACHE_TTL_MS = 60_000;
+// In-memory cache: faucet data refreshes every hour
+const CACHE_TTL_MS = 3_600_000;
 let cachedFaucets: FaucetInfo[] | null = null;
 let cacheTimestamp = 0;
 
