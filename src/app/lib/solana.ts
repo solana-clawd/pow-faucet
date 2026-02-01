@@ -1,8 +1,7 @@
 import { Connection, PublicKey } from "@solana/web3.js";
-import bs58 from "bs58";
 
 const PROGRAM_ID = new PublicKey("PoWSNH2hEZogtCg1Zgm51FnkmJperzYDgPK4fvs8taL");
-const DEVNET_URL = "https://api.devnet.solana.com";
+const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
 
 export interface FaucetInfo {
   specAddress: string;
@@ -17,50 +16,55 @@ export interface FaucetInfo {
 }
 
 export async function getAllFaucets(): Promise<FaucetInfo[]> {
-  const connection = new Connection(DEVNET_URL, "confirmed");
+  const connection = new Connection(RPC_URL, "confirmed");
 
   // Faucet spec accounts are 17 bytes: 8 discriminator + 1 difficulty + 8 amount
   const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
     filters: [{ dataSize: 17 }],
   });
 
-  const faucets: FaucetInfo[] = [];
-
-  for (const { pubkey, account } of accounts) {
+  // Pre-compute all faucet PDAs
+  const specs = accounts.map(({ pubkey, account }) => {
     const data = account.data;
-    if (data.length < 17) continue;
-
     const difficulty = data[8];
     const rewardLamports = Number(data.readBigUInt64LE(9));
-
-    // Derive faucet PDA
     const [faucetPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("source"), pubkey.toBuffer()],
       PROGRAM_ID
     );
+    return { pubkey, difficulty, rewardLamports, faucetPda };
+  });
 
-    let balanceLamports = 0;
-    try {
-      balanceLamports = await connection.getBalance(faucetPda);
-    } catch {
-      // faucet might not exist yet
+  // Batch fetch all balances in one RPC call using getMultipleAccountsInfo
+  const faucetPdas = specs.map((s) => s.faucetPda);
+  const balances: number[] = [];
+
+  // getMultipleAccountsInfo has a 100-account limit per call, batch in chunks
+  const CHUNK = 100;
+  for (let i = 0; i < faucetPdas.length; i += CHUNK) {
+    const chunk = faucetPdas.slice(i, i + CHUNK);
+    const infos = await connection.getMultipleAccountsInfo(chunk);
+    for (const info of infos) {
+      balances.push(info ? info.lamports : 0);
     }
+  }
 
-    const rewardSol = rewardLamports / 1e9;
+  const faucets: FaucetInfo[] = specs.map((spec, i) => {
+    const balanceLamports = balances[i];
+    const rewardSol = spec.rewardLamports / 1e9;
     const balanceSol = balanceLamports / 1e9;
-
-    faucets.push({
-      specAddress: pubkey.toBase58(),
-      faucetAddress: faucetPda.toBase58(),
-      difficulty,
-      rewardLamports,
+    return {
+      specAddress: spec.pubkey.toBase58(),
+      faucetAddress: spec.faucetPda.toBase58(),
+      difficulty: spec.difficulty,
+      rewardLamports: spec.rewardLamports,
       rewardSol,
       balanceLamports,
       balanceSol,
-      funded: balanceLamports >= rewardLamports,
-      mineCommand: `devnet-pow mine -d ${difficulty} --reward ${rewardSol} -ud`,
-    });
-  }
+      funded: balanceLamports >= spec.rewardLamports,
+      mineCommand: `devnet-pow mine -d ${spec.difficulty} --reward ${rewardSol} -ud`,
+    };
+  });
 
   // Sort by difficulty ascending, then reward descending
   faucets.sort((a, b) => a.difficulty - b.difficulty || b.rewardSol - a.rewardSol);
