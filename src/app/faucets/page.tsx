@@ -21,7 +21,7 @@ export default async function FaucetsPage() {
         <span className="gradient-text">Active Faucets</span>
       </h1>
       <p className="text-muted mb-8">
-        Live on-chain faucets on Solana devnet. {funded.length} of {faucets.length} funded.
+        {funded.length} funded faucet{funded.length !== 1 ? "s" : ""} on Solana devnet.
       </p>
 
       {error && (
@@ -31,10 +31,10 @@ export default async function FaucetsPage() {
       )}
 
       <div className="flex flex-col gap-4">
-        {faucets.map((faucet) => (
+        {funded.map((faucet) => (
           <div
             key={faucet.specAddress}
-            className={`glass faucet-card ${faucet.funded ? "glow" : "dim"}`}
+            className="glass faucet-card glow"
           >
             <div className="flex items-center justify-between" style={{ flexWrap: "wrap", gap: 16 }}>
               <div>
@@ -42,9 +42,7 @@ export default async function FaucetsPage() {
                   <span className="text-2xl font-bold gradient-text">
                     Difficulty {faucet.difficulty}
                   </span>
-                  <span className={`badge ${faucet.funded ? "badge-green" : "badge-red"}`}>
-                    {faucet.funded ? "FUNDED" : "EMPTY"}
-                  </span>
+                  <span className="badge badge-green">FUNDED</span>
                 </div>
                 <p className="text-sm text-muted">
                   Reward: <span style={{ color: "white", fontFamily: "monospace" }}>{faucet.rewardSol} SOL</span>
@@ -56,19 +54,17 @@ export default async function FaucetsPage() {
                 <code className="text-sm text-muted" style={{ display: "block", marginBottom: 4 }}>
                   {faucet.faucetAddress.slice(0, 20)}...
                 </code>
-                {faucet.funded && (
-                  <code className="text-sm text-green" style={{ background: "rgba(0,0,0,0.3)", padding: "4px 8px", borderRadius: 4 }}>
-                    {faucet.mineCommand}
-                  </code>
-                )}
+                <code className="text-sm text-green" style={{ background: "rgba(0,0,0,0.3)", padding: "4px 8px", borderRadius: 4 }}>
+                  {faucet.mineCommand}
+                </code>
               </div>
             </div>
           </div>
         ))}
 
-        {faucets.length === 0 && !error && (
+        {funded.length === 0 && !error && (
           <div className="glass text-center text-muted" style={{ padding: 32 }}>
-            No faucets found on devnet. The program may not have any active faucets.
+            No funded faucets found on devnet.
           </div>
         )}
       </div>
